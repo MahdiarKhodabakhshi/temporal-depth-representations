@@ -147,6 +147,21 @@ class TextLayerwiseAutoModelWrapper(BaseLayerwiseAutoModelWrapper):
         if hf_home:
             return os.path.join(hf_home, "hub")
 
+        # On offline HPC hosts we often stage a shared Hugging Face cache under
+        # scratch storage instead of exporting HF_HOME in every shell.
+        scratch_roots = []
+        scratch_env = os.getenv("SCRATCH")
+        if scratch_env:
+            scratch_roots.append(scratch_env)
+        user = os.getenv("USER")
+        if user:
+            scratch_roots.append(os.path.join("/scratch", user))
+
+        for scratch_root in scratch_roots:
+            candidate = os.path.join(scratch_root, "hf_cache", "hub")
+            if os.path.isdir(candidate):
+                return candidate
+
         return None
 
     def _is_offline_mode(self):
