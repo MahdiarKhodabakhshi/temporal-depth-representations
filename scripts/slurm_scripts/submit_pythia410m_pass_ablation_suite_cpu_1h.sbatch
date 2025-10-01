@@ -10,7 +10,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="${SLURM_SUBMIT_DIR:-}"
+if [[ -z "${REPO_ROOT}" ]]; then
+  REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+fi
 
 cd "${REPO_ROOT}"
 mkdir -p slurm_logs
@@ -21,18 +24,34 @@ if [[ -f "${REPO_ROOT}/venv/bin/activate" ]]; then
   source "${REPO_ROOT}/venv/bin/activate"
 fi
 
+LEGACY_PYTHON="/home/mahdiar/information_flow/venv/bin/python"
 if [[ -n "${PYTHON_BIN:-}" ]]; then
   PYTHON="${PYTHON_BIN}"
 elif [[ -x "${REPO_ROOT}/venv/bin/python" ]]; then
   PYTHON="${REPO_ROOT}/venv/bin/python"
+elif [[ -x "${LEGACY_PYTHON}" ]]; then
+  PYTHON="${LEGACY_PYTHON}"
 else
   PYTHON="$(command -v python3)"
 fi
 
-export HF_HOME="${HF_HOME:-${REPO_ROOT}/.hf_cache}"
+DEFAULT_SHARED_HF_HOME="/scratch/${USER}/hf_cache"
+DEFAULT_SHARED_DATASETS_CACHE="/home/mahdiar/links/projects/def-btaati/mahdiar/information_flow/.hf_cache/datasets"
+DEFAULT_SHARED_MODULES_CACHE="/home/mahdiar/links/projects/def-btaati/mahdiar/information_flow/.hf_cache/modules"
+if [[ ! -d "${DEFAULT_SHARED_HF_HOME}" ]]; then
+  DEFAULT_SHARED_HF_HOME="${REPO_ROOT}/.hf_cache"
+fi
+if [[ ! -d "${DEFAULT_SHARED_DATASETS_CACHE}" ]]; then
+  DEFAULT_SHARED_DATASETS_CACHE="${REPO_ROOT}/.hf_cache/datasets"
+fi
+if [[ ! -d "${DEFAULT_SHARED_MODULES_CACHE}" ]]; then
+  DEFAULT_SHARED_MODULES_CACHE="${REPO_ROOT}/.hf_cache/modules"
+fi
+export HF_HOME="${HF_HOME:-${DEFAULT_SHARED_HF_HOME}}"
 export HF_HUB_CACHE="${HF_HUB_CACHE:-${HF_HOME}/hub}"
-export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HF_HOME}/datasets}"
-export NLTK_DATA="${NLTK_DATA:-${REPO_ROOT}/.nltk_data}"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${DEFAULT_SHARED_DATASETS_CACHE}}"
+export HF_MODULES_CACHE="${HF_MODULES_CACHE:-${DEFAULT_SHARED_MODULES_CACHE}}"
+export NLTK_DATA="${NLTK_DATA:-/home/mahdiar/nltk_data}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
 export MKL_NUM_THREADS="${MKL_NUM_THREADS:-1}"
 export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-1}"
